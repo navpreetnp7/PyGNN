@@ -74,7 +74,10 @@ if args.cuda:
     adj_norm = adj_norm.cuda()
 
 
-def train(epoch):
+# Train model
+t_total = time.time()
+
+for epoch in range(args.epochs):
 
     t = time.time()
     model.train()
@@ -90,11 +93,5 @@ def train(epoch):
           'loss: {:.4f}'.format(loss.item()),
           'time: {:.4f}s'.format(time.time() - t))
 
-
-# Train model
-t_total = time.time()
-for epoch in range(args.epochs):
-    train(epoch)
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
-

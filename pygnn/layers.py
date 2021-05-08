@@ -7,6 +7,7 @@ from torch.nn.modules.module import Module
 
 
 class GraphConvolution(Module):
+
     """
     Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
     """
@@ -49,7 +50,7 @@ class InnerProduct(Module):
 
     def forward(self, input):
 
-        x,y = torch.split(input,split_size_or_sections=2,dim=1)
+        x,y = torch.chunk(input,chunks=2,dim=1)
         y = torch.transpose(y,0,1)
         xy = torch.mm(x,y)
         xy = torch.flatten(xy)
