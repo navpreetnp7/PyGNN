@@ -6,7 +6,6 @@ import argparse
 import numpy as np
 
 import torch
-import torch.nn.functional as F
 import torch.optim as optim
 
 from utils import load_data,normalize,toy_data
