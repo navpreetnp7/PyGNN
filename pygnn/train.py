@@ -62,7 +62,9 @@ def get_activation(name):
         activation[name] = output.detach()
     return hook
 
+model.embeddings.register_forward_hook(get_activation('embeddings'))
 model.reconstructions.register_forward_hook(get_activation('reconstructions'))
+
 
 optimizer = optim.Adam(model.parameters(),
                        lr=args.lr, weight_decay=args.weight_decay)
@@ -88,10 +90,13 @@ for epoch in range(args.epochs):
     loss.backward()
     optimizer.step()
 
-
-    print('Epoch: {:04d}'.format(epoch+1),
-          'loss: {:.4f}'.format(loss.item()),
-          'time: {:.4f}s'.format(time.time() - t))
+    if epoch%10 == 0:
+        print('Epoch: {:04d}'.format(epoch+1),
+              'loss: {:.8f}'.format(loss.item()),
+              'time: {:.4f}s'.format(time.time() - t))
 
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+
+embed = activation['embeddings']
+pred = activation['reconstructions']
