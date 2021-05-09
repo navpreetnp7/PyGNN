@@ -86,6 +86,8 @@ for epoch in range(args.epochs):
     model.train()
     optimizer.zero_grad()
     output = model(features, adj_norm)
+    embed = activation['embeddings']
+
     criterion = torch.nn.MSELoss()
     loss = criterion(torch.flatten(output), torch.flatten(adj_norm)) / A2norm
     loss.backward()
