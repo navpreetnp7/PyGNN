@@ -12,7 +12,7 @@ class GraphConvolution(Module):
     Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
     """
 
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self, in_features, out_features, bias=False):
         super(GraphConvolution, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -24,10 +24,11 @@ class GraphConvolution(Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        stdv = 1. / math.sqrt(self.weight.size(1))
-        self.weight.data.uniform_(-stdv, stdv)
+        torch.nn.init.xavier_uniform_(self.weight, gain=1.0)
         if self.bias is not None:
-            self.bias.data.uniform_(-stdv, stdv)
+            fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = math.sqrt(6 / (fan_in + fan_out))
+            torch.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input, adj):
         support = torch.mm(input, self.weight)
