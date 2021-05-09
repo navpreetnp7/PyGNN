@@ -78,6 +78,7 @@ if args.cuda:
 
 # Train model
 t_total = time.time()
+A2norm = (adj_norm ** 2).mean()
 
 for epoch in range(args.epochs):
 
@@ -86,7 +87,7 @@ for epoch in range(args.epochs):
     optimizer.zero_grad()
     output = model(features, adj_norm)
     criterion = torch.nn.MSELoss()
-    loss = criterion(torch.flatten(output), torch.flatten(adj_norm))
+    loss = criterion(torch.flatten(output), torch.flatten(adj_norm)) / A2norm
     loss.backward()
     optimizer.step()
 
