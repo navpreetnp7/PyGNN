@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 from layers import GraphConvolution, InnerProduct
+from utils import norm_embed
 
 
 class GNN(nn.Module):
@@ -16,5 +17,6 @@ class GNN(nn.Module):
         x = F.relu(self.gc1(x, adj))
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.embeddings(x, adj)
+        x = norm_embed(x)
         x = self.reconstructions(x)
         return x

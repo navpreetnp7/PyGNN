@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 
-from utils import load_data,normalize,toy_data
+from utils import load_data,normalize,toy_data,norm_embed
 from models import GNN
 
 # Training settings
@@ -18,11 +18,11 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
 parser.add_argument('--fastmode', action='store_true', default=False,
                     help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=426, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=200,
+parser.add_argument('--epochs', type=int, default=20000,
                     help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.01,
                     help='Initial learning rate.')
-parser.add_argument('--weight_decay', type=float, default=5e-4,
+parser.add_argument('--weight_decay', type=float, default=10e-8,
                     help='Weight decay (L2 loss on parameters).')
 parser.add_argument('--hidden', type=int, default=16,
                     help='Number of hidden units.')
@@ -88,18 +88,44 @@ for epoch in range(args.epochs):
     output = model(features, adj_norm)
 
     embed = activation['embeddings']
+    pred = activation['reconstructions']
+    # embedx, embedy = torch.chunk(embed, chunks=2, dim=1)
+    embedd = norm_embed(embed)
+    embedx, embedy = torch.chunk(embedd, chunks=2, dim=1)
+
+    # loss function
     criterion = torch.nn.MSELoss()
+    # regularization
+    reg_criterion = torch.nn.L1Loss()
+    reg_loss = reg_criterion((embedx ** 2).sum(axis=0), (embedy ** 2).sum(axis=0))
+
+
     loss = criterion(torch.flatten(output), torch.flatten(adj_norm)) / A2norm
     loss.backward()
     optimizer.step()
 
-    if epoch%10 == 0:
-        print('Epoch: {:04d}'.format(epoch+1),
-              'loss: {:.8f}'.format(loss.item()),
+    if epoch == 0:
+        best_loss = loss
+        best_rl = reg_loss
+        best_embed = embedd
+        best_pred = pred
+    else:
+        if loss < best_loss:
+            best_loss = loss
+            best_embed = embedd
+            best_pred = pred
+            best_rl = reg_loss
+        elif loss == best_loss and reg_loss < best_rl:
+            best_loss = loss
+            best_embed = embedd
+            best_pred = pred
+            best_rl = reg_loss
+
+    if epoch % 10 == 0:
+        print('Epoch: {:04d}'.format(epoch + 1),
+              'loss: {:.8f}'.format(best_loss.item()),
+              'reg_loss: {:.8f}'.format(best_rl.item()),
               'time: {:.4f}s'.format(time.time() - t))
 
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
-
-embed = activation['embeddings']
-pred = activation['reconstructions']
