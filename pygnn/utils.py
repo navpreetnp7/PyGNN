@@ -27,8 +27,8 @@ def norm_embed(embed):
 
     embedx,embedy = torch.chunk(embed,chunks=2,dim=1)
     ES = (embedx ** 2).sum(axis=0) / (embedy ** 2).sum(axis=0)
-    embedx = embedx / ES
-    embedy =  embedy * ES
+    embedx = embedx / (ES ** 0.25)
+    embedy = embedy * (ES ** 0.25)
     embed_norm = torch.cat((embedx,embedy),dim=1)
     return embed_norm
 
