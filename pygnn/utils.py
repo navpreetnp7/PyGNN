@@ -3,6 +3,8 @@ import scipy.sparse as sp
 import torch
 import pickle as pkl
 import networkx as nx
+import pycombo
+from sklearn.metrics import normalized_mutual_info_score as nmi
 
 def load_data():
 
@@ -49,3 +51,11 @@ def toy_data():
     adj = np.array(nx.adjacency_matrix(graph).todense(), dtype=float)
 
     return adj
+
+def nmi_score(adj1,adj2):
+
+    G1 = nx.from_numpy_matrix(np.array(adj1))
+    G2 = nx.from_numpy_matrix(np.array(adj2))
+    partition1 = pycombo.execute(G1)
+    partition2 = pycombo.execute(G2)
+    return nmi(list(partition1[0]),list(partition2[0]))

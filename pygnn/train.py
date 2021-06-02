@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 
-from utils import load_data,normalize,toy_data,norm_embed
+from utils import load_data,normalize,toy_data,norm_embed,nmi_score
 from models import GNN
 
 # Training settings
@@ -18,7 +18,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
 parser.add_argument('--fastmode', action='store_true', default=False,
                     help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=426, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=20000,
+parser.add_argument('--epochs', type=int, default=2000,
                     help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.01,
                     help='Initial learning rate.')
@@ -99,7 +99,6 @@ for epoch in range(args.epochs):
     reg_criterion = torch.nn.L1Loss()
     reg_loss = reg_criterion((embedx ** 2).sum(axis=0), (embedy ** 2).sum(axis=0))
 
-
     loss = criterion(torch.flatten(output), torch.flatten(adj_norm)) / A2norm
     loss.backward()
     optimizer.step()
@@ -121,7 +120,7 @@ for epoch in range(args.epochs):
             best_pred = pred
             best_rl = reg_loss
 
-    if epoch % 10 == 0:
+    if epoch % 100 == 0:
         print('Epoch: {:04d}'.format(epoch + 1),
               'loss: {:.8f}'.format(best_loss.item()),
               'reg_loss: {:.8f}'.format(best_rl.item()),
@@ -129,3 +128,5 @@ for epoch in range(args.epochs):
 
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+
+
