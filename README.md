@@ -32,4 +32,4 @@ Run the following command to start the training
 python train.py --epochs --lr --hidden --ndim
 ```
 
-You can also look at the embeddings after training by printing embedx and embedy
+You can also look at the embeddings after training by printing embedx and embedy.
