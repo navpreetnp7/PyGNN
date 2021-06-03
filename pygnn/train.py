@@ -11,6 +11,8 @@ import torch.optim as optim
 from utils import load_data,normalize,toy_data,norm_embed,nmi_score
 from models import GNN
 
+torch.set_printoptions(precision=8)
+
 # Training settings
 parser = argparse.ArgumentParser()
 parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -38,7 +40,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj = load_data(daily=True)
+adj = load_data(daily=False)
 #adj = toy_data()
 
 adj_norm = normalize(adj)

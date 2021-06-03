@@ -21,17 +21,18 @@ def load_data(daily=False):
         return np.array(adj)
 
 
-def normalize(d_adj):
-    d_adj_norm = np.array(d_adj)
-    for i in range(d_adj.shape[0]):
-        adj = d_adj[i]
-        adj = adj + np.identity(adj.shape[0])
-        rowsum = np.array(adj.sum(1))
-        degree_mat_inv_sqrt = np.diag(np.power(rowsum, -0.5).flatten())
-        d_adj_norm[i] = adj.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt)
-        d_adj_norm[i] = torch.FloatTensor(np.array(d_adj_norm[i]))
+def normalize(adj):
 
-    return d_adj_norm
+    adj = torch.FloatTensor(adj)
+    adj_id = torch.FloatTensor(torch.eye(adj.shape[1]))
+    adj_id = adj_id.reshape((1, adj.shape[1], adj.shape[1]))
+    adj_id = adj_id.repeat(adj.shape[0], 1, 1)
+    adj = adj + adj_id
+    rowsum = torch.FloatTensor(adj.sum(2))
+    degree_mat_inv_sqrt = torch.diag_embed(torch.float_power(rowsum,-0.5), dim1=-2, dim2=-1).float()
+    adj_norm = torch.bmm(torch.transpose(torch.bmm(adj,degree_mat_inv_sqrt),1,2),degree_mat_inv_sqrt)
+
+    return adj_norm
 
 def norm_embed(embed):
     embedx,embedy = torch.chunk(embed,chunks=2,dim=2)
