@@ -26,8 +26,6 @@ parser.add_argument('--weight_decay', type=float, default=10e-8,
                     help='Weight decay (L2 loss on parameters).')
 parser.add_argument('--hidden', type=int, default=16,
                     help='Number of hidden units.')
-parser.add_argument('--dropout', type=float, default=0.,
-                    help='Dropout rate (1 - keep probability).')
 parser.add_argument('--ndim', type=int, default=2,
                     help='Embeddings dimension.')
 
@@ -40,21 +38,19 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-#adj = load_data()
-adj = toy_data()
+adj = load_data(daily=True)
+#adj = toy_data()
+
 adj_norm = normalize(adj)
-features = np.identity(adj.shape[0])
 
 adj = torch.FloatTensor(np.array(adj))
-features = torch.FloatTensor(np.array(features))
 adj_norm = torch.FloatTensor(np.array(adj_norm))
 
-
 # Model and optimizer
-model = GNN(nfeat=features.shape[1],
+model = GNN(batch_size=adj_norm.shape[0],
+            nfeat=adj_norm.shape[1],
             nhid=args.hidden,
-            ndim=2*args.ndim,
-            dropout=args.dropout)
+            ndim=2*args.ndim)
 
 activation = {}
 def get_activation(name):
@@ -69,6 +65,12 @@ model.reconstructions.register_forward_hook(get_activation('reconstructions'))
 optimizer = optim.Adam(model.parameters(),
                        lr=args.lr, weight_decay=args.weight_decay)
 
+
+
+features = torch.FloatTensor(torch.eye(adj.shape[1]))
+features = features.reshape((1,adj.shape[1],adj.shape[1]))
+features = features.repeat(adj.shape[0], 1, 1)
+
 if args.cuda:
     model.cuda()
     features = features.cuda()
@@ -78,7 +80,8 @@ if args.cuda:
 
 # Train model
 t_total = time.time()
-A2norm = (adj_norm ** 2).mean()
+#A2norm = (adj_norm ** 2).mean()
+A2norm = (adj_norm ** 2).view(adj_norm.shape[0],-1).mean(axis=1)
 
 for epoch in range(args.epochs):
 
@@ -89,15 +92,15 @@ for epoch in range(args.epochs):
 
     embed = activation['embeddings']
     pred = activation['reconstructions']
-    # embedx, embedy = torch.chunk(embed, chunks=2, dim=1)
+
     embedd = norm_embed(embed)
-    embedx, embedy = torch.chunk(embedd, chunks=2, dim=1)
+    embedx, embedy = torch.chunk(embedd, chunks=2, dim=2)
 
     # loss function
     criterion = torch.nn.MSELoss()
     # regularization
     reg_criterion = torch.nn.L1Loss()
-    reg_loss = reg_criterion((embedx ** 2).sum(axis=0), (embedy ** 2).sum(axis=0))
+    reg_loss = reg_criterion((embedx ** 2).sum(axis=1), (embedy ** 2).sum(axis=1))
 
     loss = criterion(torch.flatten(output), torch.flatten(adj_norm)) / A2norm
     loss.backward()

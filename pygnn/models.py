@@ -5,17 +5,15 @@ from utils import norm_embed
 
 
 class GNN(nn.Module):
-    def __init__(self, nfeat, nhid, ndim, dropout):
+    def __init__(self, batch_size, nfeat, nhid, ndim):
         super(GNN, self).__init__()
 
-        self.gc1 = GraphConvolution(nfeat, nhid)
-        self.embeddings = GraphConvolution(nhid, ndim)
+        self.gc1 = GraphConvolution(batch_size, nfeat, nhid)
+        self.embeddings = GraphConvolution(batch_size, nhid, ndim)
         self.reconstructions = InnerProduct(ndim)
-        self.dropout = dropout
 
     def forward(self, x, adj):
         x = F.relu(self.gc1(x, adj))
-        x = F.dropout(x, self.dropout, training=self.training)
         x = self.embeddings(x, adj)
         x = norm_embed(x)
         x = self.reconstructions(x)

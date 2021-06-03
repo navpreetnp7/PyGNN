@@ -6,32 +6,41 @@ import networkx as nx
 import pycombo
 from sklearn.metrics import normalized_mutual_info_score as nmi
 
-def load_data():
+def load_data(daily=False):
 
-    graph = pkl.load(open("data/Taxi2017_total_net.pkl", "rb"))
-    adj = np.array(nx.adjacency_matrix(graph[0]).todense(), dtype=float)
-    adj = adj[graph[1],:][:,graph[1]]
+    if daily:
+        graph = pkl.load(open("data/Taxi2017_daily_net.pkl", "rb"))
+        g = [x[0] for x in graph[0]]
+        adj = np.array([np.array(nx.adjacency_matrix(x).todense(), dtype=float) for x in g])
+        adj = adj[:,1:, 1:]
+        return np.array(adj)
+    else:
+        graph = pkl.load(open("data/Taxi2017_total_net.pkl", "rb"))
+        adj = np.array([nx.adjacency_matrix(graph[0]).todense()], dtype=float)
+        adj = adj[:,1:, 1:]
+        return np.array(adj)
 
-    return adj
 
+def normalize(d_adj):
+    d_adj_norm = np.array(d_adj)
+    for i in range(d_adj.shape[0]):
+        adj = d_adj[i]
+        adj = adj + np.identity(adj.shape[0])
+        rowsum = np.array(adj.sum(1))
+        degree_mat_inv_sqrt = np.diag(np.power(rowsum, -0.5).flatten())
+        d_adj_norm[i] = adj.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt)
+        d_adj_norm[i] = torch.FloatTensor(np.array(d_adj_norm[i]))
 
-def normalize(adj):
-
-    adj = adj + np.identity(adj.shape[0])
-    rowsum = np.array(adj.sum(1))
-    degree_mat_inv_sqrt = np.diag(np.power(rowsum, -0.5).flatten())
-    adj_norm = adj.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt)
-    adj_norm = torch.FloatTensor(np.array(adj_norm))
-
-    return adj_norm
+    return d_adj_norm
 
 def norm_embed(embed):
-
-    embedx,embedy = torch.chunk(embed,chunks=2,dim=1)
-    ES = (embedx ** 2).sum(axis=0) / (embedy ** 2).sum(axis=0)
+    embedx,embedy = torch.chunk(embed,chunks=2,dim=2)
+    ES = (embedx ** 2).sum(axis=1) / (embedy ** 2).sum(axis=1)
+    #print(ES.shape)
+    #print(embedx.shape)
     embedx = embedx / (ES ** 0.25)
     embedy = embedy * (ES ** 0.25)
-    embed_norm = torch.cat((embedx,embedy),dim=1)
+    embed_norm = torch.cat((embedx,embedy),dim=2)
     return embed_norm
 
 def toy_data():
@@ -48,7 +57,7 @@ def toy_data():
     graph.add_edge(5, 1, weight=73)
     graph.add_edge(5, 2, weight=48)
 
-    adj = np.array(nx.adjacency_matrix(graph).todense(), dtype=float)
+    adj = np.array([nx.adjacency_matrix(graph).todense()], dtype=float)
 
     return adj
 
