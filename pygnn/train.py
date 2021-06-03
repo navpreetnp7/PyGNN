@@ -11,8 +11,6 @@ import torch.optim as optim
 from utils import load_data,normalize,toy_data,norm_embed,nmi_score
 from models import GNN
 
-torch.set_printoptions(precision=8)
-
 # Training settings
 parser = argparse.ArgumentParser()
 parser.add_argument('--no-cuda', action='store_true', default=False,
