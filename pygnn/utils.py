@@ -36,10 +36,9 @@ def normalize(adj):
 def norm_embed(embed):
     embedx,embedy = torch.chunk(embed,chunks=2,dim=2)
     ES = (embedx ** 2).sum(axis=1) / (embedy ** 2).sum(axis=1)
-    #print(ES.shape)
-    #print(embedx.shape)
+    ES = ES.unsqueeze(dim=1)
     embedx = embedx / (ES ** 0.25)
-    embedy = embedy * (ES ** 0.25)
+    embedy = embedy / (ES ** 0.25)
     embed_norm = torch.cat((embedx,embedy),dim=2)
     return embed_norm
 
