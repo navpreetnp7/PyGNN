@@ -38,7 +38,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj = load_data(daily=True)
+adj = load_data(daily=False)
 #adj = toy_data()
 
 adj_norm = normalize(adj)
@@ -102,7 +102,7 @@ for epoch in range(args.epochs):
     reg_criterion = torch.nn.L1Loss()
     reg_loss = reg_criterion((embedx ** 2).sum(axis=1), (embedy ** 2).sum(axis=1))
 
-    loss = criterion(torch.flatten(output).reshape(365,-1), torch.flatten(adj_norm).reshape(365,-1)) / A2norm
+    loss = criterion(torch.flatten(output).reshape(adj_norm.shape[0],-1), torch.flatten(adj_norm).reshape(adj_norm.shape[0],-1)) / A2norm
     loss.backward()
     optimizer.step()
 
