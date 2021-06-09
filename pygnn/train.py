@@ -18,7 +18,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
 parser.add_argument('--fastmode', action='store_true', default=False,
                     help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=426, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=2000,
+parser.add_argument('--epochs', type=int, default=1000,
                     help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.01,
                     help='Initial learning rate.')
@@ -38,7 +38,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj = load_data(daily=False)
+adj = load_data(daily=True)
 #adj = toy_data()
 
 adj_norm = normalize(adj)
@@ -50,7 +50,7 @@ adj_norm = torch.FloatTensor(np.array(adj_norm))
 model = GNN(batch_size=adj_norm.shape[0],
             nfeat=adj_norm.shape[1],
             nhid=args.hidden,
-            ndim=2*args.ndim)
+            ndim=args.ndim)
 
 activation = {}
 def get_activation(name):
@@ -59,7 +59,6 @@ def get_activation(name):
     return hook
 
 model.embeddings.register_forward_hook(get_activation('embeddings'))
-model.reconstructions.register_forward_hook(get_activation('reconstructions'))
 
 
 optimizer = optim.Adam(model.parameters(),
@@ -82,51 +81,31 @@ if args.cuda:
 t_total = time.time()
 A2norm = (adj_norm ** 2).mean()
 #A2norm = (adj_norm ** 2).view(adj_norm.shape[0],-1).mean(axis=1)
-
+print(adj_norm.shape)
 for epoch in range(args.epochs):
 
     t = time.time()
     model.train()
     optimizer.zero_grad()
-    output = model(features, adj_norm)
-
-    embed = activation['embeddings']
-    pred = activation['reconstructions']
-
-    embedd = norm_embed(embed)
-    embedx, embedy = torch.chunk(embedd, chunks=2, dim=2)
+    output,mu,sigma = model(features, adj_norm)
 
     # loss function
-    criterion = torch.nn.MSELoss()
-    # regularization
-    reg_criterion = torch.nn.L1Loss()
-    reg_loss = reg_criterion((embedx ** 2).sum(axis=1), (embedy ** 2).sum(axis=1))
-
-    loss = criterion(torch.flatten(output).reshape(adj_norm.shape[0],-1), torch.flatten(adj_norm).reshape(adj_norm.shape[0],-1)) / A2norm
+    criterion = torch.nn.GaussianNLLLoss()
+    loss = criterion(torch.flatten(adj_norm), torch.flatten(mu), torch.flatten(sigma)) / A2norm
     loss.backward()
     optimizer.step()
 
     if epoch == 0:
         best_loss = loss
-        best_rl = reg_loss
-        best_embed = embedd
-        best_pred = pred
     else:
         if loss < best_loss:
             best_loss = loss
-            best_embed = embedd
-            best_pred = pred
-            best_rl = reg_loss
-        elif loss == best_loss and reg_loss < best_rl:
+        elif loss == best_loss:
             best_loss = loss
-            best_embed = embedd
-            best_pred = pred
-            best_rl = reg_loss
 
     if epoch % 100 == 0:
         print('Epoch: {:04d}'.format(epoch + 1),
               'loss: {:.8f}'.format(best_loss.item()),
-              'reg_loss: {:.8f}'.format(best_rl.item()),
               'time: {:.4f}s'.format(time.time() - t))
 
 print("Optimization Finished!")
