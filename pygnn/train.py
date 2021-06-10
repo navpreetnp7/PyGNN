@@ -81,7 +81,7 @@ if args.cuda:
 t_total = time.time()
 A2norm = (adj_norm ** 2).mean()
 #A2norm = (adj_norm ** 2).view(adj_norm.shape[0],-1).mean(axis=1)
-print(adj_norm.shape)
+
 for epoch in range(args.epochs):
 
     t = time.time()
@@ -112,3 +112,4 @@ print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
 
+torch.nn.MS
