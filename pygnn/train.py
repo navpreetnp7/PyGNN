@@ -18,7 +18,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
 parser.add_argument('--fastmode', action='store_true', default=False,
                     help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=426, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=1000,
+parser.add_argument('--epochs', type=int, default=5000,
                     help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.01,
                     help='Initial learning rate.')
@@ -38,7 +38,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj = load_data(daily=True)
+adj = load_data(daily=False)
 #adj = toy_data()
 
 adj_norm = normalize(adj)
@@ -79,20 +79,27 @@ if args.cuda:
 
 # Train model
 t_total = time.time()
-A2norm = (adj_norm ** 2).mean()
-#A2norm = (adj_norm ** 2).view(adj_norm.shape[0],-1).mean(axis=1)
+
+# loss function
+criterion = torch.nn.GaussianNLLLoss()
+
+# NULL Model
+mu0 = adj.mean()*torch.ones(adj.shape[1:])
+sigma0 = adj.std()*torch.ones(adj.shape[1:])
+with torch.no_grad():
+    loss0 = criterion(torch.flatten(adj), torch.flatten(mu0), torch.flatten(torch.square(sigma0)))
+
 
 for epoch in range(args.epochs):
 
     t = time.time()
     model.train()
     optimizer.zero_grad()
-    output,mu,sigma = model(features, adj_norm)
+    mu,sigma = model(features, adj_norm)
 
-    # loss function
-    criterion = torch.nn.GaussianNLLLoss()
-    loss = criterion(torch.flatten(adj_norm), torch.flatten(mu), torch.flatten(sigma)) / A2norm
+    loss = criterion(torch.flatten(adj), torch.flatten(mu), torch.flatten(torch.square(sigma)))
     loss.backward()
+
     optimizer.step()
 
     if epoch == 0:
@@ -100,16 +107,11 @@ for epoch in range(args.epochs):
     else:
         if loss < best_loss:
             best_loss = loss
-        elif loss == best_loss:
-            best_loss = loss
 
-    if epoch % 100 == 0:
+    if epoch % 1250 == 0:
         print('Epoch: {:04d}'.format(epoch + 1),
               'loss: {:.8f}'.format(best_loss.item()),
               'time: {:.4f}s'.format(time.time() - t))
 
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
-
-
-torch.nn.MS
