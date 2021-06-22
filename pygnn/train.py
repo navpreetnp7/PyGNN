@@ -11,6 +11,8 @@ import torch.optim as optim
 from utils import load_data,normalize,toy_data,norm_embed,nmi_score
 from models import GNN
 
+torch.set_printoptions(sci_mode=False)
+
 # Training settings
 parser = argparse.ArgumentParser()
 parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -18,9 +20,9 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
 parser.add_argument('--fastmode', action='store_true', default=False,
                     help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=426, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=5000,
+parser.add_argument('--epochs', type=int, default=10000,
                     help='Number of epochs to train.')
-parser.add_argument('--lr', type=float, default=0.01,
+parser.add_argument('--lr', type=float, default=0.001,
                     help='Initial learning rate.')
 parser.add_argument('--weight_decay', type=float, default=10e-8,
                     help='Weight decay (L2 loss on parameters).')
@@ -46,11 +48,17 @@ adj_norm = normalize(adj)
 adj = torch.FloatTensor(np.array(adj))
 adj_norm = torch.FloatTensor(np.array(adj_norm))
 
+# loss function
+criterion = torch.nn.GaussianNLLLoss()
+
+
 # Model and optimizer
 model = GNN(batch_size=adj_norm.shape[0],
             nfeat=adj_norm.shape[1],
             nhid=args.hidden,
-            ndim=args.ndim)
+            ndim=args.ndim,
+            mu0=adj.mean(),
+            sigma0=adj.std())
 
 activation = {}
 def get_activation(name):
@@ -59,11 +67,6 @@ def get_activation(name):
     return hook
 
 model.embeddings.register_forward_hook(get_activation('embeddings'))
-
-
-optimizer = optim.Adam(model.parameters(),
-                       lr=args.lr, weight_decay=args.weight_decay)
-
 
 
 features = torch.FloatTensor(torch.eye(adj.shape[1]))
@@ -80,14 +83,14 @@ if args.cuda:
 # Train model
 t_total = time.time()
 
-# loss function
-criterion = torch.nn.GaussianNLLLoss()
-
 # NULL Model
 mu0 = adj.mean()*torch.ones(adj.shape[1:])
 sigma0 = adj.std()*torch.ones(adj.shape[1:])
 with torch.no_grad():
     loss0 = criterion(torch.flatten(adj), torch.flatten(mu0), torch.flatten(torch.square(sigma0)))
+
+optimizer = optim.Adam(model.parameters(),
+                       lr=args.lr, weight_decay=args.weight_decay)
 
 
 for epoch in range(args.epochs):
@@ -108,10 +111,13 @@ for epoch in range(args.epochs):
         if loss < best_loss:
             best_loss = loss
 
-    if epoch % 1250 == 0:
+    if epoch % 100 == 0:
         print('Epoch: {:04d}'.format(epoch + 1),
               'loss: {:.8f}'.format(best_loss.item()),
               'time: {:.4f}s'.format(time.time() - t))
 
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+
+print(adj)
+print(mu.reshape(adj.shape))

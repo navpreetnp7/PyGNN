@@ -7,11 +7,11 @@ import torch
 
 class GNN(nn.Module):
 
-    def __init__(self, batch_size, nfeat, nhid, ndim):
+    def __init__(self, batch_size, nfeat, nhid, ndim, mu0, sigma0):
         super(GNN, self).__init__()
 
-        self.gc1 = GraphConvolution(batch_size, nfeat, nhid)
-        self.embeddings = GraphConvolution(batch_size, nhid, 4 * ndim)
+        self.gc1 = GraphConvolution(batch_size, nfeat, nhid, mu0, sigma0, scale=False)
+        self.embeddings = GraphConvolution(batch_size, nhid, 4 * ndim, mu0, sigma0, scale=True)
         self.reconstructions = InnerProduct(2 * ndim)
 
     def forward(self, x, adj):
