@@ -118,6 +118,3 @@ for epoch in range(args.epochs):
 
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
-
-print(adj)
-print(mu.reshape(adj.shape))
