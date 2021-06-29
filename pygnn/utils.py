@@ -67,3 +67,24 @@ def nmi_score(adj1,adj2):
     partition1 = pycombo.execute(G1)
     partition2 = pycombo.execute(G2)
     return nmi(list(partition1[0]),list(partition2[0]))
+
+
+def svdApprox(adj, dim, relu=False):
+    adj = torch.FloatTensor(adj[0])
+    U, S, Vh = torch.linalg.svd(adj)
+    mu = torch.matmul(torch.matmul(U[:, :dim], torch.diag(S[:dim])), Vh[:dim, :])
+
+    embedx = torch.matmul(U[:, :d], torch.diag(torch.power(S[:d], 0.5)))
+    embedy = torch.transpose(torch.matmul(torch.diag(torch.power(S[:d], 0.5)), Vh[:d, :]))
+
+    criterion = torch.nn.GaussianNLLLoss()
+    if relu:
+        crt = torch.nn.ReLU()
+        mu = crt(mu)
+    mse = torch.nn.MSELoss()
+    mseloss = mse(torch.flatten(mu), torch.flatten(adj))
+    sig = torch.sqrt(mseloss)
+    sigma = sig * torch.ones(adj.shape)
+    loss = criterion(torch.flatten(adj), torch.flatten(mu), torch.flatten(torch.square(sigma)))
+
+    return mu, loss.item(), embedx, embedy

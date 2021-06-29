@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 
-from utils import load_data,normalize,toy_data,norm_embed,nmi_score
+from utils import load_data,normalize,toy_data,norm_embed,nmi_score,svdApprox
 from models import GNN
 
 torch.set_printoptions(sci_mode=False)
@@ -39,6 +39,8 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
+fixed=False
+
 # Load data
 adj = load_data(daily=False)
 #adj = toy_data()
@@ -58,7 +60,8 @@ model = GNN(batch_size=adj_norm.shape[0],
             nhid=args.hidden,
             ndim=args.ndim,
             mu0=adj.mean(),
-            sigma0=adj.std())
+            sigma0=adj.std(),
+            fixed=fixed)
 
 activation = {}
 def get_activation(name):
@@ -98,7 +101,16 @@ for epoch in range(args.epochs):
     t = time.time()
     model.train()
     optimizer.zero_grad()
-    mu,sigma = model(features, adj_norm)
+
+    if fixed:
+        mu = model(features, adj_norm)
+        with torch.no_grad():
+            mse = torch.nn.MSELoss()
+            mseloss = mse(torch.flatten(mu), torch.flatten(adj))
+            sig = torch.sqrt(mseloss)
+        sigma = sig * torch.ones(adj.shape, requires_grad=True)
+    else:
+        mu, sigma = model(features, adj_norm)
 
     loss = criterion(torch.flatten(adj), torch.flatten(mu), torch.flatten(torch.square(sigma)))
     loss.backward()
