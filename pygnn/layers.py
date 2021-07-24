@@ -18,12 +18,18 @@ class GraphConvolution(Module):
         self.mu0 = mu0
         self.sigma0 = sigma0
         self.scale = scale
-        if self.scale:
+        """if self.scale:
             self.weight = Parameter(torch.ones(batch_size, in_features, out_features))
         else:
-            self.weight = Parameter(torch.FloatTensor(batch_size, in_features, out_features))
+            self.weight = Parameter(torch.FloatTensor(batch_size, in_features, out_features))"""
 
-        self.reset_parameters()
+        weight1_eye = torch.FloatTensor(torch.eye(in_features))
+        weight1_eye = weight1_eye.reshape((1, in_features, in_features))
+        weight1_eye = weight1_eye.repeat(batch_size, 1, 1)
+        self.weight1 = Parameter(weight1_eye)
+        self.weight2 = Parameter(torch.zeros(batch_size, in_features, in_features))
+
+        #self.reset_parameters()
 
     def reset_parameters(self):
 
@@ -36,8 +42,10 @@ class GraphConvolution(Module):
             torch.nn.init.xavier_uniform_(self.weight, gain=1.0)
 
     def forward(self, input, adj):
-        support = torch.bmm(input, self.weight)
-        output = torch.bmm(adj, support)
+        #support = torch.bmm(input, self.weight)
+        #output = torch.bmm(adj, support)
+        support = self.weight1 + torch.bmm(self.weight2,adj)
+        output = torch.bmm(support, input)
         return output
 
     def __repr__(self):
