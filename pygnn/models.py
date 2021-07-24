@@ -14,19 +14,18 @@ class GNN(nn.Module):
         self.fixed = fixed
         if self.fixed:
             self.embeddings = GraphConvolution(batch_size, nhid, 2 * ndim, mu0, sigma0, scale=True)
+            self.reconstructions = InnerProduct(2 * ndim)
         else:
             self.embeddings = GraphConvolution(batch_size, nhid, 4 * ndim, mu0, sigma0, scale=True)
-        self.reconstructions = InnerProduct(2 * ndim)
+            self.reconstructions = InnerProduct(4 * ndim)
 
     def forward(self, x, adj):
-        x = F.relu(self.gc1(x, adj))
-        x = self.embeddings(x, adj)
-        x = norm_embed(x)
+        x = self.gc1(x, adj)
         if self.fixed:
             mu = F.relu(self.reconstructions(x))
-            return mu
+            return mu, x
         else:
             lr1, lr2 = torch.chunk(x, chunks=2, dim=2)
             mu = F.relu(self.reconstructions(lr1))
             sigma = F.relu(self.reconstructions(lr2))
-            return mu, sigma
+            return mu, sigma, x
