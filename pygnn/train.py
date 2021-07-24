@@ -53,28 +53,52 @@ adj_norm = torch.FloatTensor(np.array(adj_norm))
 # loss function
 criterion = torch.nn.GaussianNLLLoss()
 
+# features = torch.FloatTensor(torch.eye(adj.shape[1]))
+# features = features.reshape((1,adj.shape[1],adj.shape[1]))
+# features = features.repeat(adj.shape[0], 1, 1)
+
+# NULL Model
+mu0 = adj.mean() * torch.ones(adj.shape[1:])
+sigma0 = adj.std() * torch.ones(adj.shape[1:])
+with torch.no_grad():
+    loss0 = criterion(torch.flatten(adj), torch.flatten(mu0), torch.flatten(torch.square(sigma0)))
+
+#svd features
+svd_mu,svd_loss,svdembedx,svdembedy = svdApprox(adj=adj,dim=dim)
+features = torch.cat((svdembedx,svdembedy),dim=1)
+if not fixed:
+    mse = torch.nn.MSELoss()
+    mseloss = mse(torch.flatten(svd_mu),torch.flatten(adj))
+    sig = torch.sqrt(mseloss)/args.ndim
+    ones = torch.ones(features.size())*torch.sqrt(sig)
+    features = torch.cat((features,ones),dim=1)
+features = features.unsqueeze(dim=0)
 
 # Model and optimizer
-model = GNN(batch_size=adj_norm.shape[0],
-            nfeat=adj_norm.shape[1],
-            nhid=args.hidden,
+"""model = GNN(batch_size=adj.shape[0],
+            nfeat=features.shape[2],
+            nhid=args.hidden*args.ndim,
+            ndim=args.ndim,
+            mu0=adj.mean(),
+            sigma0=adj.std(),
+            fixed=fixed)
+"""
+
+model = GNN(batch_size=adj.shape[0],
+            nfeat=adj.shape[1],
+            nhid=adj.shape[1],
             ndim=args.ndim,
             mu0=adj.mean(),
             sigma0=adj.std(),
             fixed=fixed)
 
-activation = {}
+"""activation = {}
 def get_activation(name):
     def hook(model, input, output):
         activation[name] = output.detach()
     return hook
 
-model.embeddings.register_forward_hook(get_activation('embeddings'))
-
-
-features = torch.FloatTensor(torch.eye(adj.shape[1]))
-features = features.reshape((1,adj.shape[1],adj.shape[1]))
-features = features.repeat(adj.shape[0], 1, 1)
+model.embeddings.register_forward_hook(get_activation('embeddings'))"""
 
 if args.cuda:
     model.cuda()
@@ -82,13 +106,12 @@ if args.cuda:
     adj = adj.cuda()
     adj_norm = adj_norm.cuda()
 
-
 # Train model
 t_total = time.time()
 
 # NULL Model
-mu0 = adj.mean()*torch.ones(adj.shape[1:])
-sigma0 = adj.std()*torch.ones(adj.shape[1:])
+mu0 = adj.mean() * torch.ones(adj.shape[1:])
+sigma0 = adj.std() * torch.ones(adj.shape[1:])
 with torch.no_grad():
     loss0 = criterion(torch.flatten(adj), torch.flatten(mu0), torch.flatten(torch.square(sigma0)))
 
