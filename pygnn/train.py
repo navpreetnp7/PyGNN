@@ -20,11 +20,11 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
 parser.add_argument('--fastmode', action='store_true', default=False,
                     help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=426, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=10000,
+parser.add_argument('--epochs', type=int, default=20001,
                     help='Number of epochs to train.')
-parser.add_argument('--lr', type=float, default=0.001,
+parser.add_argument('--lr', type=float, default=0.00001,
                     help='Initial learning rate.')
-parser.add_argument('--weight_decay', type=float, default=10e-8,
+parser.add_argument('--weight_decay', type=float, default=10e-4,
                     help='Weight decay (L2 loss on parameters).')
 parser.add_argument('--hidden', type=int, default=16,
                     help='Number of hidden units.')
@@ -60,7 +60,7 @@ with torch.no_grad():
     loss0 = criterion(torch.flatten(adj), torch.flatten(mu0), torch.flatten(torch.square(sigma0)))
 
 #svd features
-svd_mu,svd_loss,svdembedx,svdembedy = svdApprox(adj=adj,dim=args.ndim)
+svd_mu,svd_sig,svd_loss,svdembedx,svdembedy = svdApprox(adj=adj,dim=args.ndim)
 features = torch.cat((svdembedx,svdembedy),dim=1)
 if not fixed:
     mse = torch.nn.MSELoss()
@@ -100,14 +100,14 @@ for epoch in range(args.epochs):
     optimizer.zero_grad()
 
     if fixed:
-        mu = model(features, adj_norm)
+        mu,lr = model(features, adj_norm)
         with torch.no_grad():
             mse = torch.nn.MSELoss()
             mseloss = mse(torch.flatten(mu), torch.flatten(adj))
             sig = torch.sqrt(mseloss)
         sigma = sig * torch.ones(adj.shape, requires_grad=True)
     else:
-        mu, sigma = model(features, adj_norm)
+        mu, sigma,lr = model(features, adj_norm)
 
     loss = criterion(torch.flatten(adj), torch.flatten(mu), torch.flatten(torch.square(sigma)))
     loss.backward()
