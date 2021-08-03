@@ -74,8 +74,8 @@ def svdApprox(adj, dim, relu=False):
     U, S, Vh = torch.linalg.svd(adj)
     mu = torch.matmul(torch.matmul(U[:, :dim], torch.diag(S[:dim])), Vh[:dim, :])
 
-    embedx = torch.matmul(U[:, :d], torch.diag(torch.power(S[:d], 0.5)))
-    embedy = torch.transpose(torch.matmul(torch.diag(torch.power(S[:d], 0.5)), Vh[:d, :]))
+    embedx = torch.matmul(U[:, :dim], torch.diag(torch.pow(S[:dim], 0.5)))
+    embedy = torch.transpose(torch.matmul(torch.diag(torch.pow(S[:dim], 0.5)), Vh[:dim, :]), 0, 1)
 
     criterion = torch.nn.GaussianNLLLoss()
     if relu:
@@ -87,4 +87,4 @@ def svdApprox(adj, dim, relu=False):
     sigma = sig * torch.ones(adj.shape)
     loss = criterion(torch.flatten(adj), torch.flatten(mu), torch.flatten(torch.square(sigma)))
 
-    return mu, loss.item(), embedx, embedy
+    return mu, sigma, loss.item(), embedx, embedy

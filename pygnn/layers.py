@@ -42,8 +42,6 @@ class GraphConvolution(Module):
             torch.nn.init.xavier_uniform_(self.weight, gain=1.0)
 
     def forward(self, input, adj):
-        #support = torch.bmm(input, self.weight)
-        #output = torch.bmm(adj, support)
         support = self.weight1 + torch.bmm(self.weight2,adj)
         output = torch.bmm(support, input)
         return output
